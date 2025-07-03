@@ -1,5 +1,6 @@
-from core.settings import get_openai_client
+from config.config import get_openai_client
 
+# Génération reéponse (Generator)
 def generate_response(context: str, question: str, model="gpt-4o-mini"):
     client = get_openai_client()
     full_prompt = f"Contexte:\n{context}\n\nQuestion:\n{question}"

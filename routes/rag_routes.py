@@ -1,40 +1,51 @@
 from fastapi import APIRouter
 from models.schema import *
-from services.embedding_service import embed_texts
-from services.retriever_service import retrieve_similar
+from services.embedding_service import get_embedding
+from services.retriever_service import retrieve_similar_texts
 from services.generator_service import generate_response
+import numpy as np
 
 router = APIRouter()
 
 @router.post("/embedding")
-def embed_batch(data: EmbeddingCVandPosteInput):
-    texts = [data.offre] + data.cvs
-    embeddings = embed_texts(texts)
+def embed_cvs_and_offre(input_data: EmbeddingCVandPosteInput):
+    # Fusion offre et CVs pour un appel batch
+    texts = [input_data.offre] + input_data.cvs
+    embeddings = get_embedding(texts)  # embeddings: np.ndarray of shape (N, D)
+    
     return {
-        "offre_embedding": embeddings[0],
-        "cvs_embedding": embeddings[1:]
+        "offre_embedding": embeddings[0],       # list[float]
+        "cvs_embedding": embeddings[1:]         # list[list[float]]
     }
+
 
 @router.post("/retriever")
-def retrieve(data: RetrieverInput):
-    return {
-        "top_cvs": retrieve_similar(data.offre_embedding, data.cvs_embedding, data.cvs, data.top_k)
-    }
+def retrieve_similar_route(input_data: RetrieverInput):
+    top_cvs = retrieve_similar_texts(
+        np.array(input_data.offre_embedding),
+        input_data.cvs_embedding,
+        input_data.cvs,
+        input_data.top_k
+    )
+    return {"top_cvs": top_cvs}
+
 
 @router.post("/generator")
-def generator(data: GeneratorInput):
-    result = generate_response(data.context, data.question)
-    return {"generated_response": result}
+def generate_answer(input_data: GeneratorInput):
+    result = generate_response(input_data.context, input_data.question)
+    return {
+        "generated_response": result
+    }
 
 @router.post("/analyse")
-def analyse(data: AnalyseInput):
-    texts = [data.offre] + data.cvs
-    embeddings = embed_texts(texts)
+def analyse(input_data: AnalyseInput):
+    texts = [input_data.offre] + input_data.cvs
+    embeddings = get_embedding(texts)
     offre_emb = embeddings[0]
     cvs_emb = embeddings[1:]
-    top_cvs = retrieve_similar(offre_emb, cvs_emb, data.cvs, data.top_k)
+    top_cvs = retrieve_similar_texts(offre_emb, cvs_emb, input_data.cvs, input_data.top_k)
     context = "\n\n".join(cv["cv"] for cv in top_cvs)
-    summary = generate_response(context, data.question)
+    summary = generate_response(context, input_data.question)
     return {
         "top_cvs": top_cvs,
         "generated_summary": summary

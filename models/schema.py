@@ -6,9 +6,9 @@ class EmbeddingCVandPosteInput(BaseModel):
     cvs: list[str]
 
 class RetrieverInput(BaseModel):
-    offre_embedding: list[float]
-    cvs: list[str]
-    cvs_embedding: list[list[float]]
+    offre_embedding: List[float]
+    cvs: List[str]
+    cvs_embedding: List[List[float]]
     top_k: int = 5
 
 class GeneratorInput(BaseModel):
